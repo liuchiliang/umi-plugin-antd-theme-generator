@@ -1,14 +1,14 @@
 {
-  "name": "umi-plugin-antd-theme",
-  "version": "2.1.2",
+  "name": "umi-plugin-antd-theme-generator",
+  "version": "1.0.0",
   "description": "",
   "authors": {
-    "name": "chenshuai2144",
-    "email": "qixian.cs@outlook.com"
+    "name": "liuchiliang",
+    "email": "l.chl@foxmail.com"
   },
-  "repository": "https://github.com/chenshuai2144/umi-plugin-ant-theme.git",
+  "repository": "https://github.com/liuchiliang/umi-plugin-antd-theme-generator.git",
   "peerDependencies": {
-    "umi": "2.x || ^2.9.0-0"
+    "umi": "3.x"
   },
   "main": "lib/index.js",
   "scripts": {
@@ -30,9 +30,20 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "antd-pro-merge-less": "^3.0.0",
+    "@babel/runtime": "^7.13.10",
+    "glob": "^7.1.6",
+    "hash.js": "^1.1.7",
+    "less": "^3.10.3",
+    "less-bundle-promise": "^1.0.7",
+    "less-plugin-npm-import": "^2.1.0",
+    "lodash.flatten": "^4.4.0",
+    "lodash.uniqby": "^4.7.0",
+    "postcss": "^6.0.21",
+    "postcss-less": "^3.1.4",
     "rimraf": "^3.0.0",
     "serve-static": "^1.14.1",
-    "slash2": "^2.0.0"
+    "slash2": "^2.0.0",
+    "strip-css-comments": "^4.1.0",
+    "uglifycss": "^0.0.29"
   }
 }
