@@ -31,6 +31,8 @@
   "license": "MIT",
   "dependencies": {
     "@babel/runtime": "^7.13.10",
+    "css-selector-tokenizer": "^0.7.3",
+    "generic-names": "^3.0.0",
     "glob": "^7.1.6",
     "hash.js": "^1.1.7",
     "less": "^3.10.3",
