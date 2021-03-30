@@ -97,7 +97,7 @@ export default function (api: IApi) {
 
   const { cwd, absOutputPath, absNodeModulesPath } = api.paths;
   const outputPath = absOutputPath;
-  const themeTemp = winPath(join(absNodeModulesPath, '.plugin-theme'));
+  const themeTemp = winPath(join(cwd, '.temp', '.plugin-theme'));
 
   // 增加中间件
   api.addMiddewares(() => {
@@ -125,16 +125,11 @@ export default function (api: IApi) {
       contentList.push(lessContent);
     }
 
-    const tempPath = winPath(join(cwd, '.temp'));
-    if (existsSync(tempPath)) {
-      rimraf.sync(tempPath);
-    }
-    mkdirSync(tempPath);
-    fs.writeFileSync(winPath(join(tempPath, 'src.less')), contentList.join('\n'));
+    fs.writeFileSync(winPath(join(themeTemp, 'src.less')), contentList.join('\n'));
 
     const opts = {
       antDir: winPath(join(absNodeModulesPath, 'antd')),
-      stylesDir: tempPath,
+      stylesDir: themeTemp,
       varFile: winPath(join(absNodeModulesPath, 'antd/lib/style/themes/default.less')),
       generateOne: true,
       themeVariables: uniqBy(flatten(options.theme.map(o => Object.keys(o.modifyVars)))),
@@ -171,7 +166,7 @@ export default function (api: IApi) {
       if (existsSync(themePath)) {
         rimraf.sync(themePath);
       }
-      mkdirSync(themePath);
+      mkdirSync(themePath, { recursive: true });
 
       await generateThemeFiles(themePath);
 
