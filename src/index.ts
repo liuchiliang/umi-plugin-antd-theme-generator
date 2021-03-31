@@ -21,13 +21,6 @@ const flatten = require('lodash.flatten');
 const uniqBy = require('lodash.uniqby');
 const { generateTheme } = require("./antd-theme-generator");
 
-interface themeConfig {
-  theme?: string;
-  fileName: string;
-  key: string;
-  modifyVars?: { [key: string]: string };
-}
-
 const defaultGenerateScopedName = (filePath: string, className: string) => {
   if (
     filePath.includes('node_modules') ||
@@ -48,6 +41,12 @@ const defaultGenerateScopedName = (filePath: string, className: string) => {
   return className;
 }
 
+const defaultOptions = {
+  theme: defaultTheme,
+  min: false,
+  generateScopedName: defaultGenerateScopedName,
+}
+
 const getLess = (from, content, generateScopedName) => 
   postcss([
     require("./postcss-less-modules")({
@@ -63,20 +62,21 @@ const getLess = (from, content, generateScopedName) =>
   });
 
 export default function (api: IApi) {
-  // 给一个默认的配置
-  let options: {
-    theme: themeConfig[];
-    min?: boolean;
-    generateScopedName?: (filePaht: string, className: string) => string,
-  } = defaultTheme;
-
-  // 从固定的路径去读取配置，而不是从 config 中读取
-  const themeConfigPath = winPath(join(api.paths.cwd, 'config/theme.config.js'));
-  if (existsSync(themeConfigPath)) {
-    options = require(themeConfigPath);
-  }
-
-  const generateScopedName = options.generateScopedName || defaultGenerateScopedName;
+  api.describe({
+    key: 'antdThemeGenerator',
+    config: {
+      default: {},
+      schema(joi) {
+        return joi.object({
+          theme: joi.array(),
+          min: joi.boolean(),
+          varFile: joi.string(),
+          generateScopedName: joi.func()
+        });
+      },
+      onChange: api.ConfigChangeType.regenerateTmpFiles,
+    },
+  });
 
   api.modifyDefaultConfig((config) => {
     config.cssLoader = {
@@ -88,6 +88,7 @@ export default function (api: IApi) {
           _: string,
           localName: string,
         ) => {
+          const generateScopedName = api.config.antdThemeGenerator?.generateScopedName || defaultGenerateScopedName;
           return generateScopedName(context.resourcePath, localName);
         },
       },
@@ -104,14 +105,7 @@ export default function (api: IApi) {
     return serveStatic(themeTemp);
   });
 
-  // 增加一个对象，用于 layout 的配合
-  api.addHTMLHeadScripts(() => [
-    {
-      content: `window.umi_plugin_ant_themeVar = ${JSON.stringify(options.theme)}`,
-    },
-  ]);
-
-  const generateThemeFiles = async (themePath) => {
+  const generateThemeFiles = async (options, themePath) => {
     const stylesDirs = [winPath(join(cwd, 'src'))];
     let styles = [];
     stylesDirs.forEach((s) => {
@@ -121,7 +115,7 @@ export default function (api: IApi) {
     const contentList = [];
     for(const filePath of styles) {
       const content = fs.readFileSync(filePath).toString();
-      const lessContent = await getLess(filePath, content, generateScopedName);
+      const lessContent = await getLess(filePath, content, options.generateScopedName || defaultGenerateScopedName);
       contentList.push(lessContent);
     }
 
@@ -130,7 +124,7 @@ export default function (api: IApi) {
     const opts = {
       antDir: winPath(join(absNodeModulesPath, 'antd')),
       stylesDir: themeTemp,
-      varFile: winPath(join(absNodeModulesPath, 'antd/lib/style/themes/default.less')),
+      varFile: options.varFile && winPath(join(cwd, options.varFile)),
       generateOne: true,
       themeVariables: uniqBy(flatten(options.theme.map(o => Object.keys(o.modifyVars)))),
     }
@@ -158,6 +152,11 @@ export default function (api: IApi) {
   }
 
   api.onGenerateFiles(async () => {
+    const options = {
+      ...defaultOptions,
+      ...(api.config.antdThemeGenerator || {})
+    };
+
     api.logger.info('💄  build theme');
     
     try {
@@ -168,7 +167,7 @@ export default function (api: IApi) {
       }
       mkdirSync(themePath, { recursive: true });
 
-      await generateThemeFiles(themePath);
+      await generateThemeFiles(options, themePath);
 
       const exportsTpl = join(__dirname, 'templates', 'exports.tpl');
       const exportsContent = fs.readFileSync(exportsTpl, 'utf-8');
@@ -188,6 +187,11 @@ export default function (api: IApi) {
     if (err) {
       return;
     }
+
+    const options = {
+      ...defaultOptions,
+      ...(api.config.antdThemeGenerator || {})
+    };
 
     mkdirSync(winPath(join(outputPath, 'theme')));
     options.theme.forEach(option => {

@@ -7,52 +7,70 @@
 - Use [antd-theme-generator](https://www.npmjs.com/package/antd-theme-generator) to generate antd theme css file.
 - Use `LocalIdentNamePlugin` in [antd-pro-merge-less](https://github.com/chenshuai2144/antd-pro-merge-less) to process css module.
 
-## Usage
-
-Configure in `config/theme.config.js`,
+## Configure
 
 ```js
-module.exports = {
-  theme: [
-    {
-      key: 'dust',
-      modifyVars: {
-        '@primary-color': '#F5222D',
+export default {
+  antdThemeGenerator: {
+    theme: [
+      {
+        key: 'dust',
+        modifyVars: {
+          '@primary-color': '#F5222D',
+        },
       },
-    },
-    {
-      key: 'volcano',
-      modifyVars: {
-        '@primary-color': '#FA541C',
+      {
+        key: 'volcano',
+        modifyVars: {
+          '@primary-color': '#FA541C',
+        },
       },
-    },
-  ],
-  // compress css
-  min: true,
-  // css module
-  generateScopedName： (filePath: string, className: string) => {
-    if (
-      filePath.includes('node_modules') ||
-      filePath.includes('ant.design.pro.less') ||
-      filePath.includes('global.less')
-    ) {
+    ],
+    // compress css
+    min: true,
+    // css module
+    generateScopedName：(filePath: string, className: string) => {
+      if (
+        filePath.includes('node_modules') ||
+        filePath.includes('ant.design.pro.less') ||
+        filePath.includes('global.less')
+      ) {
+        return className;
+      }
+      const match = filePath.match(/src(.*)/);
+      if (match && match[1]) {
+        const antdProPath = match[1].replace('.less', '');
+        const arr = winPath(antdProPath)
+          .split('/')
+          .map((a: string) => a.replace(/([A-Z])/g, '-$1'))
+          .map((a: string) => a.toLowerCase());
+        return `antd-pro${arr.join('-')}-${className}`.replace(/--/g, '-');
+      }
       return className;
     }
-    const match = filePath.match(/src(.*)/);
-    if (match && match[1]) {
-      const antdProPath = match[1].replace('.less', '');
-      const arr = winPath(antdProPath)
-        .split('/')
-        .map((a: string) => a.replace(/([A-Z])/g, '-$1'))
-        .map((a: string) => a.toLowerCase());
-      return `antd-pro${arr.join('-')}-${className}`.replace(/--/g, '-');
-    }
-    return className;
-  }
+  },
 }
 ```
 
+### theme
+
+Themes that will generate css file.
+
+### min
+
+Compress css or not. Default is false.
+
+### generateScopedName
+
+Used by css module to generate css className. Default is as the example above.
+
+### varFile
+
+Variable file containing ant design specific and your own custom variables. Default is `/node_modules/antd/lib/style/themes/default.less`.
+
 ## How to change theme
+
+To change theme, you should invoke `changeTheme` with the `key` of theme.
 
 ```js
 import { changeTheme } from 'umi';
