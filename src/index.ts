@@ -6,7 +6,6 @@ import { join } from 'path';
 import serveStatic from 'serve-static';
 import rimraf from 'rimraf';
 import { existsSync, mkdirSync } from 'fs';
-import defaultTheme from './defaultTheme';
 
 const fs = require('fs');
 const path = require("path");
@@ -42,7 +41,6 @@ const defaultGenerateScopedName = (filePath: string, className: string) => {
 }
 
 const defaultOptions = {
-  theme: defaultTheme,
   min: false,
   generateScopedName: defaultGenerateScopedName,
 }
@@ -157,6 +155,10 @@ export default function (api: IApi) {
       ...(api.config.antdThemeGenerator || {})
     };
 
+    if (!options.theme) {
+      return;
+    }
+
     api.logger.info('💄  build theme');
     
     try {
@@ -192,6 +194,10 @@ export default function (api: IApi) {
       ...defaultOptions,
       ...(api.config.antdThemeGenerator || {})
     };
+
+    if (!options.theme) {
+      return;
+    }
 
     mkdirSync(winPath(join(outputPath, 'theme')));
     options.theme.forEach(option => {
