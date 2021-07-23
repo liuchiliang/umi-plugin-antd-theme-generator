@@ -5,29 +5,14 @@ import { IApi, utils } from 'umi';
 import { join } from 'path';
 import serveStatic from 'serve-static';
 import rimraf from 'rimraf';
-import { existsSync, mkdirSync } from 'fs';
+import { mkdirSync, existsSync } from 'fs';
 
 const fs = require('fs');
-const path = require("path");
-const crypto = require("crypto");
-const glob = require("glob");
 const winPath = require('slash2');
-const less = require('less');
-const postcss = require('postcss');
-const syntax = require('postcss-less');
-const uglifycss = require('uglifycss');
-const flatten = require('lodash.flatten');
-const uniqBy = require('lodash.uniqby');
-const { generateTheme } = require("./antd-theme-generator");
+const LessThemePlugin = require('./lessPlugin/lessThemePlugin');
+const generateCssFile = require('./generateCssFile');
 
-const defaultGenerateScopedName = (filePath: string, className: string) => {
-  if (
-    filePath.includes('node_modules') ||
-    filePath.includes('ant.design.pro.less') ||
-    filePath.includes('global.less')
-  ) {
-    return className;
-  }
+const defaultGenerateScopedName = (className: string, filePath: string) => {
   const match = filePath.match(/src(.*)/);
   if (match && match[1]) {
     const antdProPath = match[1].replace('.less', '');
@@ -41,23 +26,9 @@ const defaultGenerateScopedName = (filePath: string, className: string) => {
 }
 
 const defaultOptions = {
-  min: false,
+  min: true,
   generateScopedName: defaultGenerateScopedName,
 }
-
-const getLess = (from, content, generateScopedName) => 
-  postcss([
-    require("./postcss-less-modules")({
-      generateScopedName: (className) => generateScopedName(from, className),
-    }),
-  ])
-  .process(content, {
-    from,
-    syntax,
-  })
-  .then(result => {
-    return result.css;
-  });
 
 export default function (api: IApi) {
   api.describe({
@@ -94,60 +65,27 @@ export default function (api: IApi) {
     return config;
   });
 
-  const { cwd, absOutputPath, absNodeModulesPath } = api.paths;
+  const { cwd, absOutputPath } = api.paths;
   const outputPath = absOutputPath;
   const themeTemp = winPath(join(cwd, '.temp', '.plugin-theme'));
+
+  let lessThemePlugin = LessThemePlugin();
 
   // 增加中间件
   api.addMiddewares(() => {
     return serveStatic(themeTemp);
   });
-
-  const generateThemeFiles = async (options, themePath) => {
-    const stylesDirs = [winPath(join(cwd, 'src'))];
-    let styles = [];
-    stylesDirs.forEach((s) => {
-      styles = styles.concat(glob.sync(path.join(s, "./**/*.less")));
-    });
-
-    const contentList = [];
-    for(const filePath of styles) {
-      const content = fs.readFileSync(filePath).toString();
-      const lessContent = await getLess(filePath, content, options.generateScopedName || defaultGenerateScopedName);
-      contentList.push(lessContent);
+  
+  api.modifyConfig((memo) => {
+    if (!memo.lessLoader) {
+      memo.lessLoader = {};
     }
-
-    fs.writeFileSync(winPath(join(themeTemp, 'src.less')), contentList.join('\n'));
-
-    const opts = {
-      antDir: winPath(join(absNodeModulesPath, 'antd')),
-      stylesDir: themeTemp,
-      varFile: options.varFile && winPath(join(cwd, options.varFile)),
-      generateOne: true,
-      themeVariables: uniqBy(flatten(options.theme.map(o => Object.keys(o.modifyVars)))),
+    if (!memo.lessLoader['plugins']) {
+      memo.lessLoader['plugins'] = []
     }
-
-    const css = await generateTheme(opts);
-    for(const option of options.theme) {
-      await less.render(css, {
-        modifyVars: option.modifyVars,
-        javascriptEnabled: true,
-        filename: winPath(join(themeTemp, 'src.less')),
-      })
-      .then(out => (options.min ? uglifycss.processString(out.css) : out.css))
-      .then(out => {
-        const contentHash = crypto.createHash('sha256').update(out).digest('hex');
-        const fileName = `${option.key}.${contentHash.substr(0, 8)}.css`;
-        option.fileName = fileName;
-        fs.writeFileSync(winPath(join(themePath, fileName)), out)
-      })
-      .catch(e => {
-        console.error(e);
-      })
-    }
-
-    api.logger.info(`Theme build successfully`);
-  }
+    memo.lessLoader['plugins'].push(lessThemePlugin);
+    return memo;
+  })
 
   api.onGenerateFiles(async () => {
     const options = {
@@ -159,33 +97,58 @@ export default function (api: IApi) {
       return;
     }
 
-    api.logger.info('💄  build theme');
+    lessThemePlugin.setOptions(options);
     
+    // 建立相关的临时文件夹
     try {
-      // 建立相关的临时文件夹
       const themePath = winPath(join(themeTemp, 'theme'));
       if (existsSync(themePath)) {
         rimraf.sync(themePath);
       }
       mkdirSync(themePath, { recursive: true });
-
-      await generateThemeFiles(options, themePath);
-
-      const exportsTpl = join(__dirname, 'templates', 'exports.tpl');
-      const exportsContent = fs.readFileSync(exportsTpl, 'utf-8');
-      api.writeTmpFile({
-        path: 'umi-plugin-antd-theme-generator/exports.ts',
-        content: utils.Mustache.render(exportsContent, {
-          themes: JSON.stringify(options.theme),
-        }),
-      });
-
     } catch (error) {
       console.error(error);
     }
+
+    // 初始化css的文件名，文件名中添加时间戳避免缓存问题
+    for(const option of options.theme) {
+      if (!option.filename) {
+        option.filename = `${option.key}.${Date.now()}.css`;
+      }
+    }
+
+    // 生成exports.ts
+    const exportsTpl = join(__dirname, 'templates', 'exports.tpl');
+    const exportsContent = fs.readFileSync(exportsTpl, 'utf-8');
+    api.writeTmpFile({
+      path: 'umi-plugin-antd-theme-generator/exports.ts',
+      content: utils.Mustache.render(exportsContent, {
+        themes: JSON.stringify(options.theme.map(t => ({ key: t.key, filename: t.filename }))),
+      }),
+    });
   });
 
-  api.onBuildComplete(({ err }) => {
+  api.onDevCompileDone(async ({ isFirstCompile }) => {
+    const options = {
+      ...defaultOptions,
+      ...(api.config.antdThemeGenerator || {})
+    };
+
+    api.logger.info('💄  build theme');
+
+    try {
+      const themePath = winPath(join(themeTemp, 'theme'));
+      const fileList = lessThemePlugin.getFileList();
+      fs.writeFileSync(winPath(join(themeTemp, 'lessFileList.txt')), fileList.join('\n'));
+      await generateCssFile(fileList, themePath, options);
+    } catch(e) {
+      console.error(e);
+    }
+
+    api.logger.info(`Theme build successfully`);
+  })
+
+  api.onBuildComplete(async ({ err }) => {
     if (err) {
       return;
     }
@@ -199,9 +162,23 @@ export default function (api: IApi) {
       return;
     }
 
+    api.logger.info('💄  build theme');
+
+    try {
+      const fileList = lessThemePlugin.getFileList();
+      fs.writeFileSync(winPath(join(themeTemp, 'lessFileList.txt')), fileList.join('\n'));
+    
+      const themePath = winPath(join(themeTemp, 'theme'));
+      await generateCssFile(fileList, themePath, options);
+    } catch(e) {
+      console.error(e);
+    }
+
+    api.logger.info(`Theme build successfully`);
+
     mkdirSync(winPath(join(outputPath, 'theme')));
     options.theme.forEach(option => {
-      fs.copyFileSync(winPath(join(themeTemp, 'theme', option.fileName)), winPath(join(outputPath, 'theme', option.fileName)));
+      fs.copyFileSync(winPath(join(themeTemp, 'theme', option.filename)), winPath(join(outputPath, 'theme', option.filename)));
     })
   })
 
