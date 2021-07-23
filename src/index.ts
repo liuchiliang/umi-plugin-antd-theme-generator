@@ -15,12 +15,12 @@ const generateCssFile = require('./generateCssFile');
 const defaultGenerateScopedName = (className: string, filePath: string) => {
   const match = filePath.match(/src(.*)/);
   if (match && match[1]) {
-    const antdProPath = match[1].replace('.less', '');
-    const arr = winPath(antdProPath)
+    const basePath = match[1].replace('.less', '');
+    const arr = winPath(basePath)
       .split('/')
       .map((a: string) => a.replace(/([A-Z])/g, '-$1'))
       .map((a: string) => a.toLowerCase());
-    return `antd-pro${arr.join('-')}-${className}`.replace(/--/g, '-');
+    return `${arr.join('-')}-${className}`.replace(/--/g, '-');
   }
   return className;
 }
