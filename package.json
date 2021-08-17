@@ -30,8 +30,8 @@
   "license": "MIT",
   "dependencies": {
     "@babel/runtime": "^7.13.10",
+    "crypto": "^1.0.1",
     "cssnano": "^5.0.6",
-    "hash.js": "^1.1.7",
     "less": "^3.11.3",
     "less-plugin-npm-import": "^2.1.0",
     "postcss": "^8.1.9",

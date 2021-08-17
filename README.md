@@ -62,9 +62,9 @@ Compress css or not. Default is false.
 
 Used by css module to generate css className. Default is as the example above.
 
-### varFile
+### cssnano
 
-Variable file containing ant design specific and your own custom variables. Default is `/node_modules/antd/lib/style/themes/default.less`.
+cssnano options based on default.
 
 ## How to change theme
 

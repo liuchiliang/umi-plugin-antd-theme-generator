@@ -20,7 +20,12 @@ async function generateCssFile(fileList, outputPath, options) {
     
     if (options.min) {
       css = await postcss([
-        require('cssnano')({})
+        require('cssnano')({
+          "preset": [
+            "default",
+            options.cssnano || { mergeRules: false, minifyFontValues: { removeQuotes: false } }
+          ]
+        })
       ])
       .process(css, { from: outputPath })
       .then(out => out.css);
