@@ -58,7 +58,7 @@ export default function (api: IApi) {
           localName: string,
         ) => {
           const generateScopedName = api.config.antdThemeGenerator?.generateScopedName || defaultGenerateScopedName;
-          return generateScopedName(context.resourcePath, localName);
+          return generateScopedName(localName, context.resourcePath);
         },
       },
     };
