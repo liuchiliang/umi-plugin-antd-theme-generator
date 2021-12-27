@@ -123,6 +123,7 @@ export default function (api: IApi) {
     api.writeTmpFile({
       path: 'umi-plugin-antd-theme-generator/exports.ts',
       content: utils.Mustache.render(exportsContent, {
+        publicPath: api.env === 'development' ? '/' : (api.config.publicPath || '/'),
         themes: JSON.stringify(options.theme.map(t => ({ key: t.key, filename: t.filename }))),
       }),
     });
