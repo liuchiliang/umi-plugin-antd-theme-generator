@@ -137,6 +137,10 @@ export default function (api: IApi) {
       ...(api.config.antdThemeGenerator || {})
     };
 
+    if (options.useCache) {
+      return;
+    }
+
     api.logger.info('💄  build theme');
 
     try {
