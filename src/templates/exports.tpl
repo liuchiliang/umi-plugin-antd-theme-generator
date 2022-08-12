@@ -9,7 +9,10 @@ export const changeTheme = (key) => {
   const filename = theme.filename || `${theme.key}.css`
   let styleLink = document.getElementById('theme-style');
   if (styleLink) {
-    styleLink.href = `${publicPath}theme/${filename}`;
+    const newHref = `${publicPath}theme/${filename}`;
+    if (styleLink.getAttribute('href') !== newHref) {
+      styleLink.href = `${publicPath}theme/${filename}`;
+    }
   } else {
     styleLink = document.createElement('link');
     styleLink.type = 'text/css';

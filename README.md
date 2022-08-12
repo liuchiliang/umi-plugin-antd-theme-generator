@@ -50,6 +50,26 @@ export default {
 }
 ```
 
+We can use dark theme and compact theme of [Ant Design](http://ant.design/) like this.
+
+```js
+const { getThemeVariables } = require('antd/dist/theme');
+
+export default {
+  antdThemeGenerator: {
+    theme: [
+      {
+        key: 'dark',
+        modifyVars: getThemeVariables({
+          dark: true, // Enable dark mode
+          compact: true, // Enable compact mode
+        })
+      },
+    ],
+  },
+}
+```
+
 ### theme
 
 Themes that will generate css file.
@@ -61,6 +81,10 @@ Compress css or not. Default is false.
 ### generateScopedName
 
 Used by css module to generate css className. Default is as the example above.
+
+### useCache
+
+Use last generated css files and do not generate again. Default is false.
 
 ### cssnano
 

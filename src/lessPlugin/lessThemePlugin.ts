@@ -2,6 +2,10 @@ import fs from 'fs';
 const convertLess = require('../convertLess');
 
 async function generateThemeCss(filePath, options) {
+  if (!options) {
+    return;
+  }
+  
   for(const option of options.theme) {
     const filename = filePath.split('?')[0];
     const fileContent = fs.readFileSync(filename).toString();
@@ -52,7 +56,7 @@ const LessThemePlugin = (opt) => {
     getFileList: function () {
       fileList = fileList.filter(filePath => {
         const exists = fs.existsSync(filePath.split('?')[0]);
-        if (!exists) {
+        if (!exists && options) {
           for(const option of options.theme) {
             delete option.contentMap[filePath];
           }

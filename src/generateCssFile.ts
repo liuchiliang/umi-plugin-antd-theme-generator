@@ -10,7 +10,7 @@ async function generateCssFile(fileList, outputPath, options) {
     const contentList = [];
 
     for(const filePath of fileList) {
-      const content = option.contentMap[filePath];
+      const content = option.contentMap && option.contentMap[filePath];
       if (content) {
         contentList.push(content);
       }

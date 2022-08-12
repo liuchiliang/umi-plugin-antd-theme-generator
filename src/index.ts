@@ -39,7 +39,7 @@ export default function (api: IApi) {
         return joi.object({
           theme: joi.array(),
           min: joi.boolean(),
-          varFile: joi.string(),
+          useCache: joi.boolean(),
           generateScopedName: joi.func()
         });
       },
@@ -97,23 +97,25 @@ export default function (api: IApi) {
       return;
     }
 
-    lessThemePlugin.setOptions(options);
+    if (!options.useCache) {
+      lessThemePlugin.setOptions(options);
     
-    // 建立相关的临时文件夹
-    try {
-      const themePath = winPath(join(themeTemp, 'theme'));
-      if (existsSync(themePath)) {
-        rimraf.sync(themePath);
+      // 建立相关的临时文件夹
+      try {
+        const themePath = winPath(join(themeTemp, 'theme'));
+        if (existsSync(themePath)) {
+          rimraf.sync(themePath);
+        }
+        mkdirSync(themePath, { recursive: true });
+      } catch (error) {
+        console.error(error);
       }
-      mkdirSync(themePath, { recursive: true });
-    } catch (error) {
-      console.error(error);
-    }
-
-    // 初始化css的文件名，文件名中添加时间戳避免缓存问题
-    for(const option of options.theme) {
-      if (!option.filename) {
-        option.filename = `${option.key}.${Date.now()}.css`;
+  
+      // 初始化css的文件名，文件名中添加时间戳避免缓存问题
+      for(const option of options.theme) {
+        if (!option.filename) {
+          option.filename = `${option.key}.${Date.now()}.css`;
+        }
       }
     }
 
